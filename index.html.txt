@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【テスト用】商品価格確認アプリ</title>
+    <!-- バーコード読み取り用ライブラリ -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #f4f4f9; margin: 0; padding: 20px; }
+        h1 { font-size: 20px; color: #333; }
+        #reader { width: 100%; max-width: 400px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .result-box { margin-top: 20px; background: #fff; padding: 15px; border-radius: 8px; max-width: 400px; margin-left: auto; margin-right: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: left; display: none; }
+        .result-box p { margin: 8px 0; font-size: 16px; }
+        .price { color: #d9534f; font-weight: bold; font-size: 20px; }
+        .discount { color: #f0ad4e; font-weight: bold; font-size: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>商品価格・割引チェック（テスト版）</h1>
+    
+    <!-- カメラ画面 -->
+    <div id="reader"></div>
+
+    <!-- スキャン結果表示エリア -->
+    <div id="result" class="result-box">
+        <p><strong>商品名:</strong> <span id="p-name">-</span></p>
+        <p><strong>定価:</strong> <span id="p-list">-</span> 円</p>
+        <p><strong>今週の売価:</strong> <span id="p-sale" class="price">-</span> 円</p>
+        <p><strong>割引率:</strong> <span id="p-disc" class="discount">-</span></p>
+    </div>
+
+    <script>
+        // 先ほどコピーしたご自身のGAS（ウェブアプリ）URLに書き換えてください
+        const GAS_URL = "ここにGASのウェブアプリURLを貼り付けてください";
+
+        let productData = [];
+
+        // スプレッドシートからのデータ取得
+        async function loadData() {
+            try {
+                const response = await fetch(GAS_URL);
+                productData = await response.json();
+                console.log("データ読み込み成功:", productData.length + "件");
+            } catch (error) {
+                alert("商品データの読み込みに失敗しました。GASのURLを確認してください。");
+            }
+        }
+        loadData();
+
+        // バーコード検出時の処理
+        function onScanSuccess(decodedText) {
+            const item = productData.find(p => String(p.jan) === String(decodedText));
+
+            const resultBox = document.getElementById("result");
+            if (item) {
+                document.getElementById("p-name").textContent = item.name;
+                document.getElementById("p-list").textContent = item.list_price ? Number(item.list_price).toLocaleString() : "-";
+                document.getElementById("p-sale").textContent = item.sale_price ? Number(item.sale_price).toLocaleString() : "-";
+                document.getElementById("p-disc").textContent = item.discount_rate || "-";
+                resultBox.style.display = "block";
+            } else {
+                alert("該当する商品が見つかりませんでした (JAN: " + decodedText + ")");
+            }
+        }
+
+        // カメラ起動
+        const html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 150 } },
+            onScanSuccess
+        ).catch(err => {
+            console.error("カメラ起動エラー", err);
+        });
+    </script>
+</body>
+</html>
